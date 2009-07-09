@@ -1,0 +1,2 @@
+recursive-include copd_db/public *
+recursive-include copd_db/templates *

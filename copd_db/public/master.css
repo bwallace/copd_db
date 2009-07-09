@@ -1,0 +1,79 @@
+/*
+COPDdb
+*/
+
+html, body{
+	background-color: #000;
+	margin: 0; 
+	padding: 0;
+}
+
+#wrapper{
+	width: 760px;
+	height: 100%;
+	margin: auto;
+	padding-bottom: 0px;
+	margin-bottom: 0px;
+	background-color: white;
+	font-family: helvetica;
+	font-size: 11px;
+	color: black;
+	text-align: left;
+}
+
+#inner_wrapper{
+	width: 750px;
+	padding: 5px;
+	
+}
+#child_name_div{
+	font-size: 35px;
+	color: green;
+	font-weight: boldest;
+}
+#lower_info_div{
+	width: 740px;
+	margin:auto;
+}
+#guardian_div{
+	float: left;
+	width: 230px;
+	padding: 5px;
+	border-right: 1px solid yellow;
+}
+#medical_div{
+	float: left;
+	width: 230px;
+	padding: 5px;
+	border-right: 1px solid yellow;
+}
+#emergency_div{
+	float: left;
+	width: 230px;
+	padding: 5px;
+}
+#datetime{
+	float: right;
+	padding-right: 5px;
+	
+}
+.general_info_div{
+	color: black;
+	text-align: left;
+	padding: 5px;
+	font-size: 11px;
+}
+.child_image{
+	padding-right: 5px;
+	float: left;
+}
+.odd, .even{
+    list-style: none;
+}
+info{
+	color: green;
+}	
+category{
+	font-size: 15px;
+	
+}

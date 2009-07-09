@@ -1,0 +1,6 @@
+tests
+lib
+copd_db
+controllers
+model
+config
