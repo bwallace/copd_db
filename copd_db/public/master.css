@@ -3,20 +3,39 @@ COPDdb
 */
 
 html, body{
-	background-color: #000;
+	background-color: white;
 	margin: 0; 
 	padding: 0;
 }
 
+table.pretty {
+  margin: 1em 1em 1em 2em;
+  background: whitesmoke;
+  border-collapse: collapse;
+}
+table.pretty th, table.pretty td {
+  border: 1px silver solid;
+  padding: 0.2em;
+}
+table.pretty th {
+  background: gainsboro;
+  text-align: center;
+}
+table.pretty caption {
+  margin-left: inherit;
+  margin-right: inherit;
+}
+
+
 #wrapper{
-	width: 760px;
+	width: 800px;
 	height: 100%;
 	margin: auto;
 	padding-bottom: 0px;
 	margin-bottom: 0px;
 	background-color: white;
 	font-family: helvetica;
-	font-size: 11px;
+	font-size: 12px;
 	color: black;
 	text-align: left;
 }
@@ -57,23 +76,6 @@ html, body{
 	padding-right: 5px;
 	
 }
-.general_info_div{
-	color: black;
-	text-align: left;
-	padding: 5px;
-	font-size: 11px;
-}
-.child_image{
-	padding-right: 5px;
-	float: left;
-}
-.odd, .even{
-    list-style: none;
-}
-info{
-	color: green;
-}	
-category{
-	font-size: 15px;
-	
+
+
 }

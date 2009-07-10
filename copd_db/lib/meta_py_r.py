@@ -1,5 +1,5 @@
 '''
-This module is a bridge from python to R for conducting meta-analyses. 
+This module is a bridge from python to R for conducting meta-analyses. Uses rpy2.
 '''
 
 import pdb
@@ -74,9 +74,7 @@ def run_analysis(r_frame, a_str, b_str):
         path = os.getcwd().split(os.path.sep)[:-1]
         path.extend(["copd_db", "copd_db", "public", "results", plot_name])
         path = os.path.sep.join(path)
-        #pdb.set_trace()
-        #ro.r.png(path, width=800)
-        ro.r.CairoPNG(path, width=800)
+        ro.r.CairoPNG(path, height=300, width=800)
         ro.r('forest(%s, lab.e = "Cases", lab.c ="Controls", leftlabs = c("%s", "%s", "%s", "%s", "%s"), rightcols = c("effect", "ci"), comb.random=TRUE)' % (my_result.r_repr(), "Study", a_str, b_str, a_str, b_str))
         ro.r['dev.off']()
         pdb.set_trace()

@@ -5,6 +5,7 @@
   <title>COPDdb -- Tufts Medical Center</title>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    ${ h.stylesheet_link_tag( '/master.css') } 
     <script src="/javascripts/prototype.js" type="text/javascript"></script>
     <script src="/javascripts/scriptaculous.js" type="text/javascript"></script>
     <center>
@@ -14,10 +15,11 @@
   </head>
  
   <body>
-    <font face="Helvetica, sans-serif" style="font-family: Helvetica, sans-serif; font-size: 14px; color:black">
-    ${self.body()}
-    </font>
-  <br/>
+    <div id='wrapper'>
+        ${self.body()}
+    </div>
+    
+
   </body>
   
 </html>

@@ -1,4 +1,7 @@
 <center>
+    
+<br/>
+<h2>forest plot</h2>
 <%
     if c.img_path is None:
         context.write("Sorry, there was an error performing the meta-analysis.")
@@ -7,26 +10,31 @@
 %>
 
 
-<h2>Data Used in Analysis</h2>
+<h2>analysis details</h2>
 
-<table border="2" cellspacing="0" font-weight:"normal">
-	  <tr>
-	  <%
-	  table_headers = ["study", "year", "num. cases", "num. controls"]
-	  for header in table_headers:
-	    context.write('<th>')
-	    context.write(header)
-	    context.write('</th>')
-	  context.write('</tr>')
-	  
-	  
-	  for study_index in range(len(c.data_used["study"])):
-	    context.write('<tr>')
-	    context.write('<td>' + str(c.data_used["study"][study_index]) + '</td>')
-	    context.write('<td>' + str(c.data_used["year"][study_index]) + '</td>')
-	    context.write('<td>' + str(float(c.data_used["n.e"][study_index]) / 2.0) + '</td>')
-	    context.write('<td>' + str(float(c.data_used["n.c"][study_index]) / 2.0) + '</td>')
-	    context.write('</tr>')      
-	  %> 
+Show:
+<select id="DisplayedResults" name="DisplayedResults" style="width:200px" onchange="
+new Ajax.Updater(
+    'table_results',
+    '/copd/update_displayed_data/',
+    {
+        onComplete:function(){ new Effect.Highlight('table_results', duration=4);},
+        asynchronous:true,
+        evalScripts:true,
+        parameters:{'DisplayThis': $('DisplayedResults').value}
+    }
+);
+">
+
+<option value="demographics" selected="selected" size = 300>${ "Demographics"}</option>
+<option value="table" selected="selected" size = 300>${ "Data table"}</option>
+
+</select>
+<br/><br/>
+
+<div id = "table_results">
+<table class = "pretty">
+	  ${c.table}
 </table>
+</div>
 </center>
