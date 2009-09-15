@@ -8,6 +8,15 @@
     ${ h.stylesheet_link_tag( '/master.css') } 
     <script src="/javascripts/prototype.js" type="text/javascript"></script>
     <script src="/javascripts/scriptaculous.js" type="text/javascript"></script>
+    <script>
+
+    //Sortable table script- Han Yu han@velocityhsi.com
+    //Script featured on http://www.javascriptkit.com
+    var domok=document.all||document.getElementById
+    if (domok)
+    document.write('<SCRIPT SRC="/scripts/sortTable.js"><\/SCRIPT>')
+    </script>
+    
     <center>
     <img src = "/images/header2.png">
     </center>

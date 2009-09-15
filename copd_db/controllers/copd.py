@@ -7,6 +7,7 @@ from copd_db.lib import meta_py_r
 from sqlalchemy import orm
 from sqlalchemy import and_
 from sqlalchemy import *
+import decimal
 
 log = logging.getLogger(__name__)
 
@@ -50,9 +51,9 @@ class CopdController(BaseController):
         
     def update_displayed_data(self):
         if request.params['DisplayThis'] == "demographics":
-            c.table = _make_demographics_data_table(session["demographics"])
+            c.table = _make_demographics_data_table(session["demographics"], session["publications"])
         else:
-            c.table = _make_study_data_table(session["data_used"])
+            c.table = _make_study_data_table(session["data_used"], session["publications"])
         return render("/table_fragment.mako")
     
     
@@ -86,9 +87,12 @@ class CopdController(BaseController):
         demographics_q = meta.Session.query(Demographic)
         
         # now build 'analysis unit' objects using the retrieved publications
-        analysis_units, demographics = [], []
+        analysis_units, demographics, pub_info = [], [], []
         for publication_id in all_publication_ids:
             try:
+                # fetch publication info
+                cur_pub = publications_q.filter(Publication.id == publication_id).one()
+                
                 # fetch all control arms associated with this publication
                 control_arms = arm_q.filter(and_(Arm.study_id == publication_id, Arm.is_control == True)).all()
                 control_associations = [associations_q.filter(Association.group_id == control_arm.id).one() for control_arm in control_arms]
@@ -101,9 +105,11 @@ class CopdController(BaseController):
                 case_associations = [assoc for assoc in case_associations if assoc.id in association_ids]
                 
                 for control_association, case_association in zip(control_associations, case_associations):
+                    pub_info.append(cur_pub)
+                    is_car = control_association.is_car
                     # build the analysis unit object
                     analysis_units.append(meta_py_r.AnalysisUnit(case_association, control_association,
-                                                                                            publications_q.filter(Publication.id == publication_id).one()))
+                                                                                            cur_pub, is_car))
                     case_arm_demos = demographics_q.filter(Demographic.group_id == case_association.group_id).one()
                     control_arm_demos =  demographics_q.filter(Demographic.group_id == control_association.group_id).one()
                     demographics.append({"case":case_arm_demos,  "control":control_arm_demos})                                                                                          
@@ -122,49 +128,79 @@ class CopdController(BaseController):
         #
         session["data_used"] =  ma_results[1]
         session["demographics"] = demographics
+        session["publications"] = pub_info
         session.save()
 
         # we default to the data used table
-        c.table = _make_study_data_table(session["data_used"])
+        c.table = _make_study_data_table(session["data_used"], session["publications"])
         return render("/results_fragment.mako")
 
 
-def _make_study_data_table(data, headers = ["study", "year", "num. cases", "num. controls"], cols = ["study", "year", "n.e", "n.c"]):
+def _make_study_data_table(data, publications, headers = ["study", "year", "cases", "controls", "cases A", "cases B", "controls A", "controls B"], cols = ["study", "year", "n.e", "n.c", "case_as", "case_bs", "control_as", "control_bs"]):
     ''' builds and returns a table with the study data for the parametric studies '''
-    table = _add_headers([], headers)
+    table = _add_headers([], ["", "people", "alleles"], spans = [2, 2, 4])
+    table = _add_headers(table, headers)
+    
     for study_index in range(len(data["study"])):
         table.append("<tr>")
+        
         for col in cols:
             cur_cell_val = data[col][study_index]
-            if study_index in ["n.e", "n.c"]:
-                cur_cell_val = str(float(cur_cell_val / 2.0))
-            table.append("<td>%s</td>" % cur_cell_val)
+            cur_cell_val = str(cur_cell_val.to_integral()) if isinstance(cur_cell_val, decimal.Decimal) else cur_cell_val
+            if col in ["n.e", "n.c"] and not data["car_flags"][study_index]:
+                cur_cell_val = str(int(float(cur_cell_val) / 2.0))
+
+            # if it's the study column, include a link to the pubmed article
+            if col == "study":
+                table.append(
+                    "<td><a href = http://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&cmd=search&term=%s target='_blank'>%s</a></td>" % 
+                    (publications[study_index].pubmed_id, cur_cell_val))
+            else:
+                table.append("<td>%s</td>" % cur_cell_val)
         table.append("</tr>")
         
 
     return " ".join(table)
 
     	    
-def _make_demographics_data_table(demographics):
-
+def _make_demographics_data_table(demographics, publications):
+    ''' 
+    This method assembles and returns the (html) table for the parametric demographics object. It 
+    does not include the <table> and </table> tags, however, as we expect the table_fragment
+    template to do this for us.
+    '''
+    # first head is blank to account for the study column
     control_headers = ["race", "% male", "mean age", "avg. pack-years"]
     case_headers = list(control_headers)
-    case_headers.extend(["phenotype", "emphysema" ])
 
-    control_span = len(control_headers)#_count_non_nones(demographics["controls"])
-    cases_span = len(case_headers)#_count_non_nones(demographics["cases"])
+    control_span = len(control_headers)
+    cases_span = len(case_headers)
     
-    table = _add_headers([], ["controls", "cases"], spans=[control_span, cases_span])      
+    table = _add_headers([], ["study", "controls", "cases"], spans=[1, control_span, cases_span])      
+    control_headers.insert(0, "") # for study column
     control_headers.extend(case_headers)
     table = _add_headers(table, control_headers)
     
-    for demographic in demographics:
+    for i, demographic in enumerate(demographics):
         table.append("<tr>")
+        
+        # first append the study name
+        table.append(
+            "<td><a href = http://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&cmd=search&term=%s target='_blank'>%s</a></td>" % 
+            (publications[i].pubmed_id, publications[i].author))
+        
         cont_d = demographic["control"]
-        cont_vals = [_race_encodings[cont_d.race],  cont_d.perc_male_controls,
+        perc_males = cont_d.perc_male_controls
+        if isinstance(perc_males, float):
+            perc_males = round(perc_males)
+        else:
+            perc_males = perc_males.to_integral() if cont_d.perc_male_controls is not None else None
+            
+        race_val = _race_encodings[cont_d.race] if cont_d.race is not None else ""
+        cont_vals = [race_val,  perc_males,
                               cont_d.mean_age_controls, 
                               cont_d.mean_pack_years_controls]
-        cont_vals = [_none_to_str(s) for s in cont_vals]
+        cont_vals = [_process_str(s) for s in cont_vals]
 
         table.append("<td>%s</td><td>%s</td><td>%s</td><td>%s</td>" % tuple(cont_vals)) 
         
@@ -175,14 +211,19 @@ def _make_demographics_data_table(demographics):
             emph = _emph_encodings[case_d.emphysema]
         except:
             pass
+         
+        perc_males = case_d.perc_male_cases
+        if isinstance(perc_males, float):
+            perc_males = round(perc_males)
+        else:  
+            perc_males = perc_males.to_integral() if case_d.perc_male_cases is not None else None
             
-        case_vals = [_race_encodings[case_d.race],  case_d.perc_male_cases,
+        race_val = _race_encodings[case_d.race] if case_d.race is not None else ""
+        case_vals = [race_val,  perc_males,
                             case_d.mean_age_cases,
-                            case_d.mean_pack_years_cases,
-                            case_d.copd_phenotype,
-                            emph]
-        case_vals = [_none_to_str(s) for s in case_vals]         
-        table.append("<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>" %
+                            case_d.mean_pack_years_cases]
+        case_vals = [_process_str(s) for s in case_vals]         
+        table.append("<td>%s</td><td>%s</td><td>%s</td><td>%s</td>" %
                               tuple(case_vals)) 
                                                                                   
 
@@ -190,16 +231,21 @@ def _make_demographics_data_table(demographics):
     
     return " ".join(table)
     
+
 def _count_non_nones(ls):
     count = 0
     for x in ls:
         if x is not None:
             count+=1
     return count    
-        
-def _none_to_str(x):
+
+def _process_str(x):
     if x is None:
         return ""
+    
+    if x < 0:
+        return "N/A"
+
     return x
     
 def _add_headers(table, headers, spans = None):

@@ -26,14 +26,16 @@ new Ajax.Updater(
 );
 ">
 
-<option value="demographics" selected="selected" size = 300>${ "Demographics"}</option>
 <option value="table" selected="selected" size = 300>${ "Data table"}</option>
+<option value="demographics"  size = 300>${ "Demographics"}</option>
+
 
 </select>
 <br/><br/>
 
 <div id = "table_results">
-<table class = "pretty">
+
+<table class="pretty">
 	  ${c.table}
 </table>
 </div>
