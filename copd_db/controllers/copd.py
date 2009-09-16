@@ -1,5 +1,6 @@
 import logging
 import pdb
+import time
 from copd_db.lib.base import *
 from copd_db.model import meta
 from copd_db.model.meta import Association, Gene, Arm, Publication, Demographic
@@ -8,6 +9,7 @@ from sqlalchemy import orm
 from sqlalchemy import and_
 from sqlalchemy import *
 import decimal
+
 
 log = logging.getLogger(__name__)
 
@@ -56,20 +58,60 @@ class CopdController(BaseController):
             c.table = _make_study_data_table(session["data_used"], session["publications"])
         return render("/table_fragment.mako")
     
-    
+    def _waiting(self):
+        print "\n YLDJFKJF"
+        def wait_pause():
+            #pdb.set_trace()
+            done = False
+            #pdb.set_trace()
+            while not done:
+                print "??"
+                c.img_path =  "/images/loading.gif"
+                yield render("/waiting.mako")
+                done = True
+                print "waiting..."
+                time.sleep(10)
+        return wait_pause()
+
+            
     def polymorphism_selected(self):
         ''' 
         When a polymorphism is selected, we need to run the analysis over the associated 
         studies and then render the results. This routine is responsibile for doing this.
         '''
         selected_polymorphism = request.params['Polymorphism']
-
-        print selected_polymorphism
+        
     
         if selected_polymorphism == "":
             return "No polymorphism selected."
             
+        #pdb.set_trace()
+        #self._waiting()
+        print "starting"
+
         selected_gene = request.params['Gene']
+        
+        ma_results, demographics, pub_info = self._run_ma_for_gene_poly(selected_gene, selected_polymorphism)
+        
+        # unpack results
+        r_results = ma_results[0]
+        c.img_path = r_results[0]
+        #
+        # The following two fields are `cached' using the session
+        # global dict, so that the user can select which table is 
+        # displayed after the fact
+        #
+        session["data_used"] =  ma_results[1]
+        session["demographics"] = demographics
+        session["publications"] = pub_info
+        session.save()
+
+        # we default to the data used table
+        print "done"
+        c.table = _make_study_data_table(session["data_used"], session["publications"])
+        return render("/results_fragment.mako")
+
+    def _run_ma_for_gene_poly(self, selected_gene, selected_polymorphism):
         genes_q = meta.Session.query(Gene)
         gene = genes_q.filter(Gene.gene_name == selected_gene).one()
         
@@ -119,24 +161,10 @@ class CopdController(BaseController):
                 return "sorry... there was an error. here's the trace: %s" % inst
             
         ma_results = meta_py_r.run_analysis_with_units(analysis_units)
-        # unpack results
-        r_results = ma_results[0]
-        c.img_path = r_results[0]
-        #
-        # The following two fields are `cached' so that
-        # the user can select which table is displayed after the fact
-        #
-        session["data_used"] =  ma_results[1]
-        session["demographics"] = demographics
-        session["publications"] = pub_info
-        session.save()
+        return (ma_results, demographics, pub_info)
 
-        # we default to the data used table
-        c.table = _make_study_data_table(session["data_used"], session["publications"])
-        return render("/results_fragment.mako")
-
-
-def _make_study_data_table(data, publications, headers = ["study", "year", "cases", "controls", "cases A", "cases B", "controls A", "controls B"], cols = ["study", "year", "n.e", "n.c", "case_as", "case_bs", "control_as", "control_bs"]):
+def _make_study_data_table(data, publications, headers = ["study", "year", "cases", "controls", "cases A", "cases B", "controls A", "controls B"], 
+                                                    cols = ["study", "year", "n.e", "n.c", "case_as", "case_bs", "control_as", "control_bs"]):
     ''' builds and returns a table with the study data for the parametric studies '''
     table = _add_headers([], ["", "people", "alleles"], spans = [2, 2, 4])
     table = _add_headers(table, headers)
@@ -146,10 +174,16 @@ def _make_study_data_table(data, publications, headers = ["study", "year", "case
         
         for col in cols:
             cur_cell_val = data[col][study_index]
-            cur_cell_val = str(cur_cell_val.to_integral()) if isinstance(cur_cell_val, decimal.Decimal) else cur_cell_val
+            #pdb.set_trace()
+            #cur_cell_val = str(cur_cell_val.to_integral()) if isinstance(cur_cell_val, decimal.Decimal) else cur_cell_val
+            
+            
             if col in ["n.e", "n.c"] and not data["car_flags"][study_index]:
-                cur_cell_val = str(int(float(cur_cell_val) / 2.0))
-
+                cur_float_val = float(cur_cell_val)/2.0
+                cur_cell_val = _num_to_pretty_str(cur_float_val)
+            elif col in ["case_as", "case_bs", "control_as", "control_bs"]:
+                cur_cell_val = _num_to_pretty_str(cur_cell_val)
+                
             # if it's the study column, include a link to the pubmed article
             if col == "study":
                 table.append(
@@ -162,6 +196,11 @@ def _make_study_data_table(data, publications, headers = ["study", "year", "case
 
     return " ".join(table)
 
+def _num_to_pretty_str(x):
+    if x == int(x):
+        return str(int(x))
+    else:
+        return str(x)
     	    
 def _make_demographics_data_table(demographics, publications):
     ''' 

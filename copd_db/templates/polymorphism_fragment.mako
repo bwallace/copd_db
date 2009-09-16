@@ -5,7 +5,10 @@ new Ajax.Updater(
     'results',
     '/copd/polymorphism_selected/',
     {
+        onCreate:function(){new Effect.Appear('busy', duration=4)},
+        
         onComplete:function(){ new Effect.Highlight('results', duration=4);},
+        onComplete:function(){new Effect.Fade('busy')},
         asynchronous:true,
         evalScripts:true,
         parameters:{'Polymorphism': $('Polymorphism').value, 'Gene':${"'" + c.gene_name + "'"} }

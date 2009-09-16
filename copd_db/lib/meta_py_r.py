@@ -83,9 +83,13 @@ def floats_to_ints(ls):
     int_ls = []
     for x in ls:
         try:
-            int_ls.append(int(x))
+            int_ls.append(int(str(x)))
         except:
-            int_ls.append(round(float(x)))
+            float_val = float(str(x))
+            if float_val == round(float_val):
+                int_ls.append(int(float_val))
+            else:
+                int_ls.append(float_val)
     return int_ls
     
 def run_analysis(r_frame, a_str, b_str):

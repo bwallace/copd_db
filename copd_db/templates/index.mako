@@ -1,5 +1,6 @@
 
 # -*- coding: utf-8 -*-
+#onComplete:function(){ new Effect.Highlight('results', duration=4);},
 <%inherit file="master.mako" />
 
 <%def name="head_tags()">
@@ -40,7 +41,8 @@ new Ajax.Updater(
     'results',
     '/copd/polymorphism_selected/',
     {
-        onComplete:function(){ new Effect.Highlight('results', duration=4);},
+        
+        onCreate:function(){ new Effect.Highlight('results', duration=4);},
         asynchronous:true,
         evalScripts:true,
         parameters:{'Polymorphism': $('Polymorphism').value}
@@ -51,6 +53,10 @@ new Ajax.Updater(
 </select>
 </div>
 </center>
+
+
+<div id="busy" style = 'display:none'><center><img src = "images/loading.gif"></img></center></div>
+
 
 <div id="results" style='float: center'>
 <br/>
