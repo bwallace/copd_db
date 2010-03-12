@@ -58,22 +58,7 @@ class CopdController(BaseController):
             c.table = _make_study_data_table(session["data_used"], session["publications"])
         return render("/table_fragment.mako")
     
-    def _waiting(self):
-        print "\n YLDJFKJF"
-        def wait_pause():
-            #pdb.set_trace()
-            done = False
-            #pdb.set_trace()
-            while not done:
-                print "??"
-                c.img_path =  "/images/loading.gif"
-                yield render("/waiting.mako")
-                done = True
-                print "waiting..."
-                time.sleep(10)
-        return wait_pause()
 
-            
     def polymorphism_selected(self):
         ''' 
         When a polymorphism is selected, we need to run the analysis over the associated 
@@ -85,9 +70,6 @@ class CopdController(BaseController):
         if selected_polymorphism == "":
             return "No polymorphism selected."
             
-        #pdb.set_trace()
-        #self._waiting()
-        print "starting"
 
         selected_gene = request.params['Gene']
         
@@ -111,6 +93,12 @@ class CopdController(BaseController):
         c.table = _make_study_data_table(session["data_used"], session["publications"])
         return render("/results_fragment.mako")
 
+    def links(self):
+        return render("/links.mako")
+        
+    def citing(self):
+        return render("/citing.mako")
+        
     def _run_ma_for_gene_poly(self, selected_gene, selected_polymorphism):
         genes_q = meta.Session.query(Gene)
         gene = genes_q.filter(Gene.gene_name == selected_gene).one()
@@ -155,7 +143,7 @@ class CopdController(BaseController):
                     case_arm_demos = demographics_q.filter(Demographic.group_id == case_association.group_id).one()
                     control_arm_demos =  demographics_q.filter(Demographic.group_id == control_association.group_id).one()
                     demographics.append({"case":case_arm_demos,  "control":control_arm_demos})                                                                                          
-                                                                                     
+                   
             except Exception, inst:
                 print inst
                 return "sorry... there was an error. here's the trace: %s" % inst
@@ -168,16 +156,18 @@ def _make_study_data_table(data, publications, headers = ["study", "year", "case
     ''' builds and returns a table with the study data for the parametric studies '''
     table = _add_headers([], ["", "people", "alleles"], spans = [2, 2, 4])
     table = _add_headers(table, headers)
-    
+
     for study_index in range(len(data["study"])):
         table.append("<tr>")
         
         for col in cols:
             cur_cell_val = data[col][study_index]
-            #pdb.set_trace()
-            #cur_cell_val = str(cur_cell_val.to_integral()) if isinstance(cur_cell_val, decimal.Decimal) else cur_cell_val
             
-            
+            # 11/16/09 -- pretty printing authors in the case that multiple authors were
+            # inserted into the database for a study. these will be delimited by ";". we
+            # just want to grab the first author.
+            if col == "study":
+                cur_cell_val = cur_cell_val.split(";")[0]
             if col in ["n.e", "n.c"] and not data["car_flags"][study_index]:
                 cur_float_val = float(cur_cell_val)/2.0
                 cur_cell_val = _num_to_pretty_str(cur_float_val)
@@ -227,7 +217,7 @@ def _make_demographics_data_table(demographics, publications):
         table.append(
             "<td><a href = http://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&cmd=search&term=%s target='_blank'>%s</a></td>" % 
             (publications[i].pubmed_id, publications[i].author))
-        
+
         cont_d = demographic["control"]
         perc_males = cont_d.perc_male_controls
         if isinstance(perc_males, float):
@@ -235,7 +225,7 @@ def _make_demographics_data_table(demographics, publications):
         else:
             perc_males = perc_males.to_integral() if cont_d.perc_male_controls is not None else None
             
-        race_val = _race_encodings[cont_d.race] if cont_d.race is not None else ""
+        race_val = _race_encodings[cont_d.race] if cont_d.race is not None and _race_encodings.has_key(cont_d.race) else ""
         cont_vals = [race_val,  perc_males,
                               cont_d.mean_age_controls, 
                               cont_d.mean_pack_years_controls]
@@ -257,7 +247,7 @@ def _make_demographics_data_table(demographics, publications):
         else:  
             perc_males = perc_males.to_integral() if case_d.perc_male_cases is not None else None
             
-        race_val = _race_encodings[case_d.race] if case_d.race is not None else ""
+        race_val = _race_encodings[case_d.race] if case_d.race is not None and _race_encodings.has_key(case_d.race) else ""
         case_vals = [race_val,  perc_males,
                             case_d.mean_age_cases,
                             case_d.mean_pack_years_cases]
@@ -279,10 +269,7 @@ def _count_non_nones(ls):
     return count    
 
 def _process_str(x):
-    if x is None:
-        return ""
-    
-    if x < 0:
+    if x is None or x < 0:
         return "N/A"
 
     return x

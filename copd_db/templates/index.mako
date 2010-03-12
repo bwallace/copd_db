@@ -8,6 +8,10 @@
 
 <%def name="body()">
 
+<br/>
+ Main | <a href="/copd/links">Links</a> | <a href="/copd/citing">Citing</a>
+<br/>
+
 <center>
 
 <br/>
